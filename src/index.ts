@@ -32,6 +32,9 @@ import { startScheduleSync, fetchAndSync } from "./lib/schedule-sync.js";
 const app = express();
 const PORT = Number(process.env.PORT) || 3010;
 
+// ── Trust proxy (Cloudflare) ──
+app.set("trust proxy", 1);
+
 // ── Security headers ──
 app.use(helmet({ contentSecurityPolicy: false }));
 
