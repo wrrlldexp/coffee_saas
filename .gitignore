@@ -1,10 +1,12 @@
 node_modules/
 dist/
 .env
-.env.production
+.env.*
+!.env.example
 *.db
 *.tar.gz
 uploads/
 backups/
 data-snapshot/
 .DS_Store
+.claude/sessions/
