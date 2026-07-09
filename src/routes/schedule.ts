@@ -185,7 +185,7 @@ router.get("/payroll", async (req: Request, res: Response) => {
 
     // Find rate for user
     function getRate(userId: string) {
-      return rates.find((r) => r.userId === userId) || null;
+      return rates.find((r: any) => r.userId === userId) || null;
     }
 
     // Calc hours from time strings
@@ -197,7 +197,7 @@ router.get("/payroll", async (req: Request, res: Response) => {
       return Math.max(0, (mins - breakMin) / 60);
     }
 
-    const payroll = members.map((m) => {
+    const payroll = members.map((m: any) => {
       const mSlots = userSlots.get(m.user.id) || [];
       const rate = getRate(m.user.id);
       const hourlyRate = rate?.rate || 0;
@@ -231,16 +231,16 @@ router.get("/payroll", async (req: Request, res: Response) => {
         secondHalf: { hours: Math.round(hoursSecond * 10) / 10, shifts: shiftsSecond, earned: earnSecond },
         total: { hours: Math.round((hoursFirst + hoursSecond) * 10) / 10, shifts: shiftsFirst + shiftsSecond, earned: earnFirst + earnSecond },
       };
-    }).filter((p) => p.total.shifts > 0 || p.hourlyRate > 0);
+    }).filter((p: any) => p.total.shifts > 0 || p.hourlyRate > 0);
 
     res.json(okResponse({
       month: monthStr,
       lastDay,
       payroll,
       totals: {
-        earnedFirst: payroll.reduce((s, p) => s + p.firstHalf.earned, 0),
-        earnedSecond: payroll.reduce((s, p) => s + p.secondHalf.earned, 0),
-        earnedTotal: payroll.reduce((s, p) => s + p.total.earned, 0),
+        earnedFirst: payroll.reduce((s: number, p: any) => s + p.firstHalf.earned, 0),
+        earnedSecond: payroll.reduce((s: number, p: any) => s + p.secondHalf.earned, 0),
+        earnedTotal: payroll.reduce((s: number, p: any) => s + p.total.earned, 0),
       },
     }));
   } catch (err) {

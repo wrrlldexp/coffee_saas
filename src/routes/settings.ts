@@ -13,7 +13,7 @@ router.get("/", async (req, res) => {
     const settings = await req.db.setting.findMany({
       where: { orgId: req.orgId },
     });
-    const map = Object.fromEntries(settings.map((s) => [s.key, s.value]));
+    const map = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
     res.json(okResponse(map));
   } catch (err) {
     console.error("GET /api/settings error:", err);

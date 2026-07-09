@@ -31,7 +31,7 @@ router.get("/", requireAuth, async (req, res) => {
       email: user.email,
       phone: user.phone,
       image: user.image,
-      memberships: user.members.map((m) => ({
+      memberships: user.members.map((m: any) => ({
         memberId: m.id,
         orgId: m.organizationId,
         orgName: m.organization.name,
