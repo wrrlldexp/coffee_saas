@@ -1,0 +1,11 @@
+takt24.ru {
+	reverse_proxy app:3010
+
+	encode gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
