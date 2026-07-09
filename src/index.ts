@@ -36,7 +36,11 @@ const PORT = Number(process.env.PORT) || 3010;
 app.set("trust proxy", 1);
 
 // ── Security headers ──
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+  contentSecurityPolicy: false,
+  strictTransportSecurity: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
 
 // ── CORS ──
 app.use(cors({
