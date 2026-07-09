@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
   MapPin,
@@ -46,7 +46,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const { logout } = useAuth()
   const { activeMembership, memberships, switchOrg, role } = useOrg()
   const [orgDropdownOpen, setOrgDropdownOpen] = useState(false)
-  const location = useLocation()
 
   const filteredNav = navItems.filter((item) => hasMinRole(role, item.minRole))
 

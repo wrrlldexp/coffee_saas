@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api, setActiveOrg, getActiveOrg } from '@/api/client'
-import type { MeResponse, Membership } from '@/types/api'
+import type { MeResponse } from '@/types/api'
 
 const ORG_KEY = 'takt_active_org'
 

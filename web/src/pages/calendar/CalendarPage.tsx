@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { useCalendarTasks, useCreateCalendarTask, useToggleCalendarTask, useDeleteCalendarTask } from '@/api/queries/use-calendar'
-import { Calendar, Plus, Loader2, Check, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useCalendarTasks, useCreateCalendarTask, useToggleCalendarTask } from '@/api/queries/use-calendar'
+import { Plus, Loader2, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, isToday } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
@@ -11,7 +11,6 @@ export function CalendarPage() {
   const { data: tasks, isLoading } = useCalendarTasks(monthStr)
   const createTask = useCreateCalendarTask()
   const toggleTask = useToggleCalendarTask()
-  const deleteTask = useDeleteCalendarTask()
   const [showForm, setShowForm] = useState(false)
   const [text, setText] = useState('')
   const [date, setDate] = useState('')
