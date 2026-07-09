@@ -106,7 +106,18 @@ app.post("/api/schedule/sync", async (_req, res) => {
 // ── Uploads (photo reports) ──
 app.use("/uploads", express.static(path.resolve(__dirname, "../uploads")));
 
-// ── Static files ──
+// ── React frontend (web/dist) ──
+const webDist = path.resolve(__dirname, "../web/dist");
+app.use(express.static(webDist, {
+  maxAge: "30d",
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  }
+}));
+
+// ── Legacy static files (public/) ──
 app.use(express.static(path.resolve(__dirname, "../public"), {
   maxAge: "7d",
   setHeaders: (res, filePath) => {
@@ -116,22 +127,14 @@ app.use(express.static(path.resolve(__dirname, "../public"), {
   }
 }));
 
-// ── Explicit index route (no-cache) ──
-app.get("/", (_req, res) => {
+// ── SPA fallback — all non-API routes → React index.html ──
+app.get("*", (req, res) => {
+  // Skip API and uploads paths
+  if (req.path.startsWith("/api/") || req.path.startsWith("/uploads/")) {
+    return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Not found" } });
+  }
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.sendFile(path.resolve(__dirname, "../public/index.html"));
-});
-
-// ── Onboarding route ──
-app.get("/onboarding", (_req, res) => {
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.sendFile(path.resolve(__dirname, "../public/onboarding.html"));
-});
-
-// ── Admin backoffice ──
-app.get("/admin", (_req, res) => {
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.sendFile(path.resolve(__dirname, "../public/admin.html"));
+  res.sendFile(path.resolve(webDist, "index.html"));
 });
 
 // ── Start ──
