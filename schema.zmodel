@@ -1,0 +1,697 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// Auth user — @@auth model for ZenStack
+// ============================================================
+
+model user {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions      session[]
+  accounts      account[]
+  members       member[]
+
+  phone            String?
+  telegramId       BigInt?   @unique
+  notificationPrefs Json?
+  uiPrefs          Json?
+
+  activityLogs  ActivityLog[]
+  notifications Notification[]
+  pushSubs      PushSubscription[]
+  testAttempts  TestAttempt[]
+
+  // Self: can read own profile, update own profile
+  @@allow('read', auth().id == id)
+  @@allow('update', auth().id == id)
+
+  @@map("user")
+  @@auth
+}
+
+// ============================================================
+// better-auth core tables — no tenant policies (managed by better-auth)
+// ============================================================
+
+model session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress            String?
+  userAgent            String?
+  userId               String
+  activeOrganizationId String?
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@allow('all', auth().id == userId)
+  @@map("session")
+}
+
+model account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  user      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@allow('all', auth().id == userId)
+  @@map("account")
+}
+
+model verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@allow('all', true)
+  @@map("verification")
+}
+
+// ============================================================
+// Organization + members — tenant root
+// ============================================================
+
+model organization {
+  id        String   @id
+  name      String
+  slug      String?  @unique
+  logo      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  metadata  String?
+
+  timezone    String   @default("Europe/Moscow")
+  plan        Plan     @default(TRIAL)
+  trialEndsAt DateTime?
+
+  members     member[]
+  invitations invitation[]
+  locations   Location[]
+  shifts      Shift[]
+  orders      Order[]
+  calTasks    CalendarTask[]
+  alerts      Alert[]
+  auditLogs   AuditLog[]
+  settings    Setting[]
+  templates   ChecklistTemplate[]
+  products    Product[]
+  recipes     Recipe[]
+  scheduleSlots ScheduleSlot[]
+  payRates    PayRate[]
+  regulations  Regulation[]
+  regulationLogs RegulationLog[]
+
+  // Any member can read their org
+  @@allow('read', members?[userId == auth().id])
+  // Owner can update org
+  @@allow('update', members?[userId == auth().id && role == 'owner'])
+  // Owner can delete org
+  @@allow('delete', members?[userId == auth().id && role == 'owner'])
+  // Create handled by better-auth plugin
+  @@allow('create', true)
+
+  @@map("organization")
+}
+
+model member {
+  id             String   @id
+  organizationId String
+  userId         String
+  role           String   @default("member")
+  createdAt      DateTime @default(now())
+
+  taktRole    TaktRole @default(BARISTA)
+  locationIds String[]
+
+  organization organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         user         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Members of the same org can read each other
+  @@allow('read', organization.members?[userId == auth().id])
+  // Owner/admin can manage members
+  @@allow('create,update,delete', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+
+  @@unique([organizationId, userId])
+  @@map("member")
+}
+
+model invitation {
+  id             String   @id
+  organizationId String
+  email          String
+  role           String?
+  status         String   @default("pending")
+  expiresAt      DateTime
+  inviterId      String
+
+  taktRole   TaktRole?
+  locationId String?
+
+  organization organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Org members with owner/admin role can manage invitations
+  @@allow('read', organization.members?[userId == auth().id])
+  @@allow('create,update,delete', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+
+  @@map("invitation")
+}
+
+// ============================================================
+// Enums
+// ============================================================
+
+enum Plan {
+  TRIAL
+  START
+  NETWORK
+  BLOCKED
+}
+
+enum TaktRole {
+  OWNER
+  OPS_DIRECTOR
+  HEAD_BARISTA
+  MANAGER
+  BARISTA
+  TRAINEE
+}
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
+}
+
+// ============================================================
+// Domain models — all scoped to organization via orgId
+// ============================================================
+
+model Location {
+  id       String  @id @default(cuid())
+  orgId    String
+  name     String
+  address  String?
+  geoLat   Float?
+  geoLng   Float?
+  isActive Boolean @default(true)
+  timezone String  @default("Europe/Moscow")
+  resetHour Int    @default(10)
+  settings  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  shifts       Shift[]
+  orders       Order[]
+  calTasks     CalendarTask[]
+  alerts       Alert[]
+
+  // Any org member can read locations
+  @@allow('read', organization.members?[userId == auth().id])
+  // Admin/owner can manage
+  @@allow('create,update,delete', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+
+  @@map("location")
+}
+
+model Shift {
+  id              String      @id @default(cuid())
+  orgId           String
+  locationId      String
+  date            String
+  status          ShiftStatus @default(OPEN)
+  openedBy        String?
+  openedAt        DateTime?
+  closedBy        String?
+  closedAt        DateTime?
+  responsibleId   String?
+  responsibleName String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  organization organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  location     Location        @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  completions  TaskCompletion[]
+  events       ShiftEvent[]
+  ratings      ShiftRating[]
+  orders       Order[]
+
+  // Any org member can read shifts
+  @@allow('read', organization.members?[userId == auth().id])
+  // Any org member can create/update shifts (open/close)
+  @@allow('create,update', organization.members?[userId == auth().id])
+  // Only admin/owner can delete
+  @@allow('delete', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+
+  @@unique([locationId, date])
+  @@map("shift")
+}
+
+model TaskCompletion {
+  id        String   @id @default(cuid())
+  shiftId   String
+  taskKey   String
+  done      Boolean  @default(false)
+  byUserId  String?
+  byName    String?
+  doneAt    DateTime?
+  photo     String?
+  listData  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  // Inherit from shift's org
+  @@allow('read', shift.organization.members?[userId == auth().id])
+  @@allow('create,update', shift.organization.members?[userId == auth().id])
+  @@allow('delete', shift.organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+
+  @@unique([shiftId, taskKey])
+  @@map("task_completion")
+}
+
+model ShiftEvent {
+  id       String   @id @default(cuid())
+  shiftId  String
+  taskKey  String?
+  userId   String?
+  userName String?
+  action   String
+  at       DateTime @default(now())
+
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  @@allow('read', shift.organization.members?[userId == auth().id])
+  @@allow('create', shift.organization.members?[userId == auth().id])
+
+  @@map("shift_event")
+}
+
+model ShiftRating {
+  id          String   @id @default(cuid())
+  shiftId     String
+  userId      String
+  userName    String
+  rating      Int
+  comment     String?
+  reviewPhoto String?
+  createdAt   DateTime @default(now())
+
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  @@allow('read', shift.organization.members?[userId == auth().id])
+  @@allow('create', shift.organization.members?[userId == auth().id])
+  @@allow('update,delete', shift.organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+
+  @@map("shift_rating")
+}
+
+model Order {
+  id         String   @id @default(cuid())
+  orgId      String
+  locationId String
+  shiftId    String?
+  shiftDate  String?
+  userId     String
+  userName   String
+  text       String
+  createdAt  DateTime @default(now())
+
+  organization organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  location     Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  shift        Shift?       @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+
+  @@allow('read', organization.members?[userId == auth().id])
+  @@allow('create', organization.members?[userId == auth().id])
+  @@allow('update,delete', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+
+  @@map("order")
+}
+
+model CalendarTask {
+  id           String   @id @default(cuid())
+  orgId        String
+  locationId   String
+  date         String
+  text         String
+  color        String   @default("default")
+  done         Boolean  @default(false)
+  assignedTo   String?
+  assignedName String?
+  createdBy    String?
+  repeat       String?
+  repeatGroup  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  organization organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  location     Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@allow('read', organization.members?[userId == auth().id])
+  @@allow('create,update', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+  @@allow('delete', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+
+  @@map("calendar_task")
+}
+
+model ChecklistTemplate {
+  id        String   @id @default(cuid())
+  orgId     String
+  name      String
+  type      String   @default("closing")
+  sections  Json
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@allow('read', organization.members?[userId == auth().id])
+  @@allow('create,update,delete', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+
+  @@map("checklist_template")
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  orgId        String
+  sku          String?
+  name         String
+  group        String?
+  unit         String   @default("шт")
+  costPrice    Float?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  organization organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@allow('read', organization.members?[userId == auth().id])
+  @@allow('create,update,delete', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+
+  @@unique([orgId, sku])
+  @@map("product")
+}
+
+model Alert {
+  id         String   @id @default(cuid())
+  orgId      String
+  locationId String?
+  type       String
+  severity   String   @default("warning")
+  message    String
+  data       Json?
+  resolved   Boolean  @default(false)
+  resolvedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  organization organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  location     Location?    @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  @@allow('read', organization.members?[userId == auth().id])
+  @@allow('create,update', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+  @@allow('delete', organization.members?[userId == auth().id && role == 'owner'])
+
+  @@map("alert")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  orgId      String
+  userId     String?
+  userName   String?
+  action     String
+  targetType String?
+  targetId   String?
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  organization organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  // Only admin/owner can read audit logs
+  @@allow('read', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+  // System creates audit logs (via rawDb), no user create
+  @@allow('create', organization.members?[userId == auth().id])
+
+  @@map("audit_log")
+}
+
+// ============================================================
+// User-scoped models (scoped by userId, not orgId)
+// ============================================================
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String
+  description String?
+  meta        Json?
+  createdAt   DateTime @default(now())
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@allow('read', auth().id == userId)
+  @@allow('create', auth().id == userId)
+
+  @@map("activity_log")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  message   String
+  data      Json?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@allow('read', auth().id == userId)
+  @@allow('update', auth().id == userId)
+  @@allow('create', true)
+
+  @@map("notification")
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  sub       Json
+  createdAt DateTime @default(now())
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@allow('all', auth().id == userId)
+
+  @@map("push_subscription")
+}
+
+model TestAttempt {
+  id         String    @id @default(cuid())
+  userId     String
+  testKey    String
+  score      Int?
+  passed     Boolean?
+  answers    Json?
+  questions  Json?
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@allow('read', auth().id == userId)
+  @@allow('create,update', auth().id == userId)
+
+  @@map("test_attempt")
+}
+
+// ============================================================
+// Org settings
+// ============================================================
+
+model Setting {
+  id    String @id @default(cuid())
+  orgId String
+  key   String
+  value Json
+
+  organization organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@allow('read', organization.members?[userId == auth().id])
+  @@allow('create,update,delete', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+
+  @@unique([orgId, key])
+  @@map("setting")
+}
+
+// ============================================================
+// Recipes (техкарты)
+// ============================================================
+
+model Recipe {
+  id          String   @id @default(cuid())
+  orgId       String
+  name        String
+  group       String?
+  description String?
+  photo       String?
+  output      Float    @default(1)
+  outputUnit  String   @default("шт")
+  costPrice   Float?
+  steps       Json?
+  ingredients Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organization organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@allow('read', organization.members?[userId == auth().id])
+  @@allow('create,update,delete', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+
+  @@map("recipe")
+}
+
+// ============================================================
+// Schedule (график работы)
+// ============================================================
+
+model ScheduleSlot {
+  id         String   @id @default(cuid())
+  orgId      String
+  userId     String
+  userName   String
+  locationId String?
+  date       String
+  startTime  String
+  endTime    String
+  breakMin   Int      @default(0)
+  status     String   @default("scheduled")
+  note       String?
+  createdBy  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  organization organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@allow('read', organization.members?[userId == auth().id])
+  @@allow('create,update,delete', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+
+  @@unique([orgId, userId, date])
+  @@map("schedule_slot")
+}
+
+// ============================================================
+// Pay rates (ставки оплаты)
+// ============================================================
+
+model PayRate {
+  id         String   @id @default(cuid())
+  orgId      String
+  userId     String
+  userName   String
+  type       String   @default("hourly")
+  rate       Float
+  currency   String   @default("RUB")
+  validFrom  String
+  validTo    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  organization organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@allow('read', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+  @@allow('create,update,delete', organization.members?[userId == auth().id && role == 'owner'])
+
+  @@map("pay_rate")
+}
+
+// ============================================================
+// Regulations (регламенты — шаблоны ежедневных чеклистов)
+// ============================================================
+
+model Regulation {
+  id          String   @id @default(cuid())
+  orgId       String
+  locationId  String?
+  name        String
+  type        String   @default("opening") // opening, closing, midday
+  sections    Json     // [{time, tasks: [{name, subtasks, dayFilter, note}]}]
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organization organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@allow('read', organization.members?[userId == auth().id])
+  @@allow('create,update,delete', organization.members?[userId == auth().id && (role == 'owner' || role == 'admin')])
+
+  @@map("regulation")
+}
+
+// ============================================================
+// Regulation logs (журнал выполнения регламентов)
+// ============================================================
+
+model RegulationLog {
+  id            String    @id @default(cuid())
+  orgId         String
+  regulationId  String
+  date          String
+  userId        String
+  userName      String
+  completions   Json      // {"0-0": true, "1-2": false, ...}
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  organization organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([regulationId, date, userId])
+  @@map("regulation_log")
+}
+
+// ============================================================
+// Platform admin — no tenant policies, accessed via rawDb only
+// ============================================================
+
+model PlatformAdmin {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  sessionToken String?
+  createdAt    DateTime @default(now())
+
+  // Deny all via enhanced client — only rawDb access
+  @@deny('all', true)
+
+  @@map("platform_admin")
+}

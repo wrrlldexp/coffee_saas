@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: takt-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: takt
+      POSTGRES_PASSWORD: takt_dev_2024
+      POSTGRES_DB: takt
+    ports:
+      - "5433:5432"
+    volumes:
+      - takt-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U takt -d takt"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: takt-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - takt-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  takt-pg-data:
+  takt-redis-data:

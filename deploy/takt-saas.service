@@ -1,0 +1,22 @@
+[Unit]
+Description=takt-saas Node.js Application
+After=network.target postgresql.service redis-server.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/takt-saas
+EnvironmentFile=/opt/takt-saas/.env.production
+ExecStart=/usr/bin/node dist/index.js
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=takt-saas
+
+# Security hardening
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

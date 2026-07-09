@@ -1,0 +1,8 @@
+node_modules
+.env
+.env.*
+*.tar.gz
+.git
+.claude
+uploads/*
+!uploads/.gitkeep

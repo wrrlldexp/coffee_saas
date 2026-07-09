@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>takt — Регистрация</title>
+<style>
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --text: #1e293b;
+  --text-secondary: #64748b;
+  --border: #e2e8f0;
+  --error: #ef4444;
+  --success: #22c55e;
+  --radius: 12px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wizard {
+  width: 100%;
+  max-width: 440px;
+  padding: 16px;
+}
+.logo {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.logo h1 {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -1px;
+}
+.logo p {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-top: 4px;
+}
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+}
+.steps {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+.step-dot {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background .3s;
+}
+.step-dot.active { background: var(--primary); }
+.step-dot.done { background: var(--success); }
+
+.step { display: none; }
+.step.visible { display: block; }
+
+.step h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.step p.subtitle {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.field {
+  margin-bottom: 16px;
+}
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+.field input, .field select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 15px;
+  outline: none;
+  transition: border-color .2s;
+  background: var(--card);
+  color: var(--text);
+}
+.field input:focus, .field select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+}
+.field input.error { border-color: var(--error); }
+.field .hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+.field .err-msg {
+  font-size: 12px;
+  color: var(--error);
+  margin-top: 4px;
+  display: none;
+}
+
+.btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+  margin-top: 8px;
+}
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-primary:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+.btn-secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  margin-top: 12px;
+}
+.btn-secondary:hover { color: var(--text); }
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.btn-demo {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+}
+.btn-demo:hover {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  border-color: #7dd3fc;
+}
+.btn-demo:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+.demo-hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+.global-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: var(--error);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  display: none;
+}
+
+/* Step 4: Success */
+.success-icon {
+  width: 64px;
+  height: 64px;
+  background: #dcfce7;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin: 0 auto 16px;
+}
+.success-info {
+  text-align: center;
+}
+.success-info h2 {
+  margin-bottom: 8px;
+}
+.success-info p {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 480px) {
+  .card { padding: 24px 20px; }
+  .wizard { padding: 12px; }
+}
+</style>
+</head>
+<body>
+<svg style="display:none"><symbol id="taktMark" viewBox="0 0 100 100">
+  <rect x="12" y="48" width="15" height="34" rx="6" fill="currentColor"/>
+  <rect x="33" y="34" width="15" height="48" rx="6" fill="currentColor"/>
+  <rect x="54" y="20" width="15" height="62" rx="6" fill="#C8924A"/>
+  <rect x="75" y="42" width="9" height="40" rx="4.5" fill="currentColor" opacity=".5"/>
+</symbol></svg>
+<div class="wizard">
+  <div class="logo">
+    <svg width="36" height="36" style="margin-bottom:8px"><use href="#taktMark"/></svg>
+    <h1>takt</h1>
+    <p>Платформа управления кафе</p>
+  </div>
+
+  <div class="card">
+    <div class="steps">
+      <div class="step-dot active" id="dot-0"></div>
+      <div class="step-dot" id="dot-1"></div>
+      <div class="step-dot" id="dot-2"></div>
+      <div class="step-dot" id="dot-3"></div>
+    </div>
+
+    <div class="global-error" id="globalError"></div>
+
+    <!-- Step 0: Registration -->
+    <div class="step visible" id="step-0">
+      <h2>Создайте аккаунт</h2>
+      <p class="subtitle">Начните управлять вашими кафе за 2 минуты</p>
+
+      <div class="field">
+        <label for="regName">Ваше имя</label>
+        <input id="regName" type="text" placeholder="Иван Иванов" autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="regEmail">Email</label>
+        <input id="regEmail" type="email" placeholder="ivan@cafe.ru" autocomplete="email">
+      </div>
+      <div class="field">
+        <label for="regPhone">Телефон <span style="color:var(--text-secondary)">(необязательно)</span></label>
+        <input id="regPhone" type="tel" placeholder="+7 900 123-45-67" autocomplete="tel">
+      </div>
+      <div class="field">
+        <label for="regPassword">Пароль</label>
+        <input id="regPassword" type="password" placeholder="Минимум 8 символов" autocomplete="new-password">
+        <div class="hint">Минимум 8 символов</div>
+      </div>
+
+      <button class="btn btn-primary" onclick="doSignup()">Продолжить</button>
+
+      <div class="divider">или</div>
+      <button class="btn-demo" id="demoBtn" onclick="doDemo()">Попробовать демо</button>
+      <div class="demo-hint">Мгновенный доступ с заполненными данными</div>
+
+      <div class="divider">уже есть аккаунт?</div>
+      <button class="btn btn-secondary" style="margin-top:0;color:var(--primary);font-weight:600" onclick="toggleLogin()">Войти</button>
+    </div>
+
+    <!-- Login form (hidden by default) -->
+    <div class="step" id="step-login">
+      <h2>Вход</h2>
+      <p class="subtitle">Войдите в свой аккаунт</p>
+
+      <div class="field">
+        <label for="loginEmail">Email</label>
+        <input id="loginEmail" type="email" placeholder="ivan@cafe.ru" autocomplete="email">
+      </div>
+      <div class="field">
+        <label for="loginPassword">Пароль</label>
+        <input id="loginPassword" type="password" placeholder="Пароль" autocomplete="current-password">
+      </div>
+
+      <button class="btn btn-primary" onclick="doLogin()">Войти</button>
+      <button class="btn btn-secondary" onclick="toggleLogin()">← Назад к регистрации</button>
+    </div>
+
+    <!-- Step 1: Create Organization -->
+    <div class="step" id="step-1">
+      <h2>Ваша компания</h2>
+      <p class="subtitle">Создайте организацию для управления кафе</p>
+
+      <div class="field">
+        <label for="orgName">Название</label>
+        <input id="orgName" type="text" placeholder="Мои кафе">
+      </div>
+      <div class="field">
+        <label for="orgSlug">URL-идентификатор</label>
+        <input id="orgSlug" type="text" placeholder="moi-cafe" pattern="[a-z0-9-]+">
+        <div class="hint">Латиница, цифры и дефис. Будет в адресе: takt.pro/<span id="slugPreview">moi-cafe</span></div>
+      </div>
+      <div class="field">
+        <label for="orgTimezone">Часовой пояс</label>
+        <select id="orgTimezone">
+          <option value="Europe/Moscow">Москва (UTC+3)</option>
+          <option value="Europe/Samara">Самара (UTC+4)</option>
+          <option value="Asia/Yekaterinburg">Екатеринбург (UTC+5)</option>
+          <option value="Asia/Novosibirsk">Новосибирск (UTC+7)</option>
+          <option value="Asia/Vladivostok">Владивосток (UTC+10)</option>
+          <option value="Europe/Kaliningrad">Калининград (UTC+2)</option>
+        </select>
+      </div>
+
+      <button class="btn btn-primary" onclick="doCreateOrg()">Создать организацию</button>
+    </div>
+
+    <!-- Step 2: Add first location -->
+    <div class="step" id="step-2">
+      <h2>Первая точка</h2>
+      <p class="subtitle">Добавьте вашу первую кофейню</p>
+
+      <div class="field">
+        <label for="locName">Название точки</label>
+        <input id="locName" type="text" placeholder="Центральная кофейня">
+      </div>
+      <div class="field">
+        <label for="locAddress">Адрес <span style="color:var(--text-secondary)">(необязательно)</span></label>
+        <input id="locAddress" type="text" placeholder="ул. Примерная, 1">
+      </div>
+
+      <button class="btn btn-primary" onclick="doCreateLocation()">Добавить точку</button>
+      <button class="btn btn-secondary" onclick="goStep(3)">Пропустить</button>
+    </div>
+
+    <!-- Step 3: Success -->
+    <div class="step" id="step-3">
+      <div class="success-info">
+        <div class="success-icon">🎉</div>
+        <h2>Всё готово!</h2>
+        <p>Ваша организация <strong id="doneOrgName"></strong> создана.<br>
+        14 дней пробного периода активированы.</p>
+        <button class="btn btn-primary" onclick="goToDashboard()">Перейти в панель управления</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+let currentStep = 0;
+let sessionCookie = null; // managed by browser httpOnly cookie
+let orgId = null;
+let orgName = '';
+
+function goStep(n) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('visible'));
+  document.getElementById('step-' + n).classList.add('visible');
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('dot-' + i);
+    dot.className = 'step-dot';
+    if (i < n) dot.classList.add('done');
+    if (i === n) dot.classList.add('active');
+  }
+  currentStep = n;
+  hideError();
+}
+
+function showError(msg) {
+  const el = document.getElementById('globalError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('globalError').style.display = 'none';
+}
+
+function toggleLogin() {
+  const loginStep = document.getElementById('step-login');
+  const regStep = document.getElementById('step-0');
+  const showingLogin = loginStep.classList.contains('visible');
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('visible'));
+  if (showingLogin) {
+    regStep.classList.add('visible');
+  } else {
+    loginStep.classList.add('visible');
+  }
+  hideError();
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !email.includes('@')) { showError('Введите email'); return; }
+  if (!password) { showError('Введите пароль'); return; }
+
+  const btn = document.querySelector('#step-login .btn-primary');
+  setLoading(btn, true);
+  try {
+    await api('POST', '/api/auth/sign-in/email', { email, password });
+    window.location.href = '/';
+  } catch (err) {
+    showError(err.message || 'Неверный email или пароль');
+    setLoading(btn, false);
+  }
+}
+
+function setLoading(btn, loading) {
+  if (loading) {
+    btn.disabled = true;
+    btn.dataset.origText = btn.textContent;
+    btn.innerHTML = '<span class="spinner"></span>Загрузка...';
+  } else {
+    btn.disabled = false;
+    btn.textContent = btn.dataset.origText || 'Продолжить';
+  }
+}
+
+async function api(method, path, body, extraHeaders) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json', ...(extraHeaders || {}) },
+    credentials: 'include',
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API + path, opts);
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const msg = data?.message || data?.error?.message || `Ошибка ${res.status}`;
+    throw new Error(msg);
+  }
+  return data;
+}
+
+// ── Demo mode ──
+
+async function doDemo() {
+  const btn = document.getElementById('demoBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="border-color:rgba(3,105,161,.3);border-top-color:#0369a1"></span>Создаём демо...';
+  hideError();
+
+  try {
+    const result = await api('POST', '/api/demo/setup');
+    if (result.ok && result.data) {
+      // Auto sign-in with demo credentials
+      await api('POST', '/api/auth/sign-in/email', {
+        email: result.data.credentials.email,
+        password: result.data.credentials.password,
+      });
+
+      orgId = result.data.orgId;
+      orgName = result.data.orgName;
+      document.getElementById('doneOrgName').textContent = orgName;
+
+      // Skip to success with demo message
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('visible'));
+      document.getElementById('step-3').classList.add('visible');
+      for (let i = 0; i < 4; i++) {
+        document.getElementById('dot-' + i).className = 'step-dot done';
+      }
+      document.getElementById('dot-3').className = 'step-dot active';
+
+      // Update success text for demo
+      document.querySelector('.success-info h2').textContent = 'Демо готово!';
+      document.querySelector('.success-info p').innerHTML =
+        'Организация <strong>' + orgName + '</strong> создана с демо-данными:<br>' +
+        '2 точки, 3 сотрудника, смены, чеклисты, товары и заказы.';
+    }
+  } catch (err) {
+    showError(err.message);
+    btn.disabled = false;
+    btn.textContent = 'Попробовать демо';
+  }
+}
+
+// ── Step 0: Signup ──
+
+async function doSignup() {
+  const btn = document.querySelector('#step-0 .btn-primary');
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const phone = document.getElementById('regPhone').value.trim();
+  const password = document.getElementById('regPassword').value;
+
+  if (!name) { showError('Введите имя'); return; }
+  if (!email || !email.includes('@')) { showError('Введите корректный email'); return; }
+  if (password.length < 8) { showError('Пароль должен быть не менее 8 символов'); return; }
+
+  setLoading(btn, true);
+  try {
+    await api('POST', '/api/auth/sign-up/email', { name, email, password });
+
+    // Auto sign-in after signup
+    await api('POST', '/api/auth/sign-in/email', { email, password });
+
+    // Update phone if provided
+    if (phone) {
+      try {
+        await api('PATCH', '/api/me/phone', { phone });
+      } catch { /* ignore, non-critical */ }
+    }
+
+    goStep(1);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+// ── Step 1: Create Org ──
+
+document.getElementById('orgName').addEventListener('input', function() {
+  const slug = this.value.toLowerCase()
+    .replace(/[а-яё]/g, c => {
+      const map = 'абвгдежзийклмнопрстуфхцчшщъыьэюя';
+      const lat = 'abvgdezhzijklmnoprstufhcchshshjyjjeju';
+      // Simple transliteration
+      return {'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z',
+        'и':'i','й':'j','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s',
+        'т':'t','у':'u','ф':'f','х':'h','ц':'c','ч':'ch','ш':'sh','щ':'sch','ъ':'',
+        'ы':'y','ь':'','э':'e','ю':'yu','я':'ya'}[c] || c;
+    })
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .slice(0, 30);
+  document.getElementById('orgSlug').value = slug;
+  document.getElementById('slugPreview').textContent = slug || 'my-cafe';
+});
+
+document.getElementById('orgSlug').addEventListener('input', function() {
+  this.value = this.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+  document.getElementById('slugPreview').textContent = this.value || 'my-cafe';
+});
+
+async function doCreateOrg() {
+  const btn = document.querySelector('#step-1 .btn-primary');
+  const name = document.getElementById('orgName').value.trim();
+  const slug = document.getElementById('orgSlug').value.trim();
+  const timezone = document.getElementById('orgTimezone').value;
+
+  if (!name) { showError('Введите название организации'); return; }
+  if (!slug || slug.length < 2) { showError('URL-идентификатор должен быть не менее 2 символов'); return; }
+
+  setLoading(btn, true);
+  try {
+    const result = await api('POST', '/api/auth/organization/create', { name, slug });
+    orgId = result.id;
+    orgName = name;
+    document.getElementById('doneOrgName').textContent = name;
+
+    goStep(2);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+// ── Step 2: Create Location ──
+
+async function doCreateLocation() {
+  const btn = document.querySelector('#step-2 .btn-primary');
+  const name = document.getElementById('locName').value.trim();
+  const address = document.getElementById('locAddress').value.trim();
+
+  if (!name) { showError('Введите название точки'); return; }
+
+  setLoading(btn, true);
+  try {
+    await api('POST', '/api/locations', {
+      name,
+      address: address || undefined,
+    }, { 'x-org-id': orgId });
+    goStep(3);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+// ── Step 3: Go to dashboard ──
+
+function goToDashboard() {
+  window.location.href = '/';
+}
+</script>
+</body>
+</html>
