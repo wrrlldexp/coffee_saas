@@ -10,3 +10,4 @@ backups/
 data-snapshot/
 .DS_Store
 .claude/sessions/
+graphify-out/
